@@ -4,8 +4,9 @@ library(openxlsx)
 library(eply)
 library(plyr)
 library(conflicted)
+
 # Prefer dplyr over all other packages
-conflicts_prefer(dplyr::summarize(), dplyr::rename(), dplyr::group_by(), dplyr::filter(), dplyr::mutate())
+conflicts_prefer(dplyr::summarize(), dplyr::rename(), dplyr::group_by(), dplyr::filter(), dplyr::mutate(), base:as.numeric())
 
 # Set the working directory to the location of the unzipped file folders (i.e. one folder for each year)
 # This line must be run independently of all other lines, and will ask for the user to enter the file path to Unzipped File Folders in the console below!
@@ -52,7 +53,6 @@ for (i in 1:length(YearFolders)) {
 }
 # Remove unnecessary objects
 rm(YearFolders, UnzippedFileLocation, i, FilesToPull)
-
 
 # Read in the Variable Matching sheet for Household variables
 HouseholdVariables <- read.xlsx("C:/Users/ikennedy/OneDrive - JBREC/General - BP research_ public use microdata coding and data/AHS/AHSVariablesbyYear.xlsx", sheet = 1)
@@ -123,7 +123,7 @@ Data_2021 <- Household_2021 %>%
 
 # Remove all 2015-2021 household/project datasets, all this data now lies in the 'Data_[YEAR] datasets
 rm(Household_2015, Household_2017, Household_2019, Household_2021, Project_2015, Project_2017, Project_2019, Project_2021, HouseholdList, ProjectList, selected_datasets, i, SelectColumns)
-rm(VariablesNow_NeedtoLocate, VariablesLater, VariablesNow, Years, ProjectVariables)
+rm(VariablesNow_NeedtoLocate, VariablesLater, VariablesNow, ProjectVariables)
 
 # Custom function for reclassifying variables
 Reclassify <- function(Data) {
@@ -325,55 +325,46 @@ Reclassify <- function(Data) {
     select(-c(OMB13CBSA))
 }
 
-# Finalize the 2015-2021 data by using the custom function above
-Data_2015 <- Reclassify(Data_2015) %>%
-  mutate(AHSYEAR = 2015) %>%
-  # Amend the JOBCOMPYR variable to read the correct year for 2015 data
-  mutate(JOBCOMPYR = case_when(JOBCOMPYR == '20XX - 2' ~ (AHSYEAR - 2),
-                               JOBCOMPYR == '20XX - 1' ~ (AHSYEAR - 1),
-                               JOBCOMPYR == '20XX' ~ AHSYEAR)) %>%
-  # Amend the JOBWORKYR variable to read the correct year for 2015 data
-  mutate(JOBWORKYR = case_when(JOBWORKYR == '20XX - 2' ~ (AHSYEAR - 2),
-                               JOBWORKYR == '20XX - 1' ~ (AHSYEAR - 1),
-                               JOBWORKYR == '20XX' ~ AHSYEAR))
 
-Data_2017 <- Reclassify(Data_2017) %>%
-  mutate(AHSYEAR = 2017) %>%
-  # Amend the JOBCOMPYR variable to read the correct year for 2017 data
-  mutate(JOBCOMPYR = case_when(JOBCOMPYR == '20XX - 2' ~ (AHSYEAR - 2),
-                               JOBCOMPYR == '20XX - 1' ~ (AHSYEAR - 1),
-                               JOBCOMPYR == '20XX' ~ AHSYEAR))  %>%
-  # Amend the JOBWORKYR variable to read the correct year for 2017 data
-  mutate(JOBWORKYR = case_when(JOBWORKYR == '20XX - 2' ~ (AHSYEAR - 2),
-                                JOBWORKYR == '20XX - 1' ~ (AHSYEAR - 1),
-                                JOBWORKYR == '20XX' ~ AHSYEAR))
+Years <- as.numeric(Years)
 
-Data_2019 <- Reclassify(Data_2019 )%>%
-  mutate(AHSYEAR = 2019) %>%
-  # Amend the JOBCOMPYR variable to read the correct year for 2019 data
-  mutate(JOBCOMPYR = case_when(JOBCOMPYR == '20XX - 2' ~ (AHSYEAR - 2),
-                               JOBCOMPYR == '20XX - 1' ~ (AHSYEAR - 1),
-                               JOBCOMPYR == '20XX' ~ AHSYEAR))  %>%
-  # Amend the JOBWORKYR variable to read the correct year for 2019 data
-  mutate(JOBWORKYR = case_when(JOBWORKYR == '20XX - 2' ~ (AHSYEAR - 2),
-                                JOBWORKYR == '20XX - 1' ~ (AHSYEAR - 1),
-                                JOBWORKYR == '20XX' ~ AHSYEAR))
+for (i in Years){
+  
+  assign(paste0('Data_', i),
+         # Use the reclassification functtion on each 'Data_[YEAR]' and resave as 'Data_[YEAR]'
+         value = Reclassify(get(paste0('Data_', i))) %>%
+                              mutate(AHSYEAR = i))
+  assign(paste0('Data_', i),
+         # Amend the JOBCOMPYR and JOBWORKYR for each 'Data_[YEAR]' and resave as 'Data_[YEAR]'
+         value = get(paste0('Data_', i)) %>%
+                              # Amend the JOBCOMPYR variable to read the correct year
+                              mutate(JOBCOMPYR = case_when(JOBCOMPYR == '20XX - 2' ~ (i - 2),
+                                                           JOBCOMPYR == '20XX - 1' ~ (i - 1),
+                                                           JOBCOMPYR == '20XX' ~ i))  %>%
+                              # Amend the JOBWORKYR variable to read the correct year
+                              mutate(JOBWORKYR = case_when(JOBWORKYR == '20XX - 2' ~ (i - 2),
+                                                           JOBWORKYR == '20XX - 1' ~ (i - 1),
+                                                           JOBWORKYR == '20XX' ~ i)))
+}
 
-Data_2021 <- Reclassify(Data_2021) %>%
-  mutate(AHSYEAR = 2021) %>%
-  # Amend the JOBCOMPYR variable to read the correct year for 2021 data
-  mutate(JOBCOMPYR = case_when(JOBCOMPYR == '20XX - 2' ~ (AHSYEAR - 2),
-                               JOBCOMPYR == '20XX - 1' ~ (AHSYEAR - 1),
-                               JOBCOMPYR == '20XX' ~ AHSYEAR))  %>%
-  # Amend the JOBWORKYR variable to read the correct year for 2021 data
-  mutate(JOBWORKYR = case_when(JOBWORKYR == '20XX - 2' ~ (AHSYEAR - 2),
-                                JOBWORKYR == '20XX - 1' ~ (AHSYEAR - 1),
-                                JOBWORKYR == '20XX' ~ AHSYEAR))
-
-
+# Attach 2017-2021 datasets to 2015 by row
 Data_2015_2021 <- Data_2015 %>%
-  # Attach 2017-2021 datasets to 2015 by row
-  rbind(Data_2017, Data_2019, Data_2021) %>%
+  rbind(Data_2017, Data_2019, Data_2021)
+ 
+# Function to replace 'NR' with -1 in a vector
+ReplaceNR <- function(x) {
+  ifelse(x == 'NR', -1, x)
+}
+
+# Function to apply the replacement to all columns in a data frame
+ReplaceNR_Final <- function(Data) {
+  Data %>% mutate(across(everything(), ReplaceNR))
+}
+
+# Apply ReplaceNR_Final() to the 2015-2021 data, this will replace any 'NR' values with -1
+Data_2015_2021 <- ReplaceNR_Final(Data_2015_2021)
+
+Data_2015_2021 <- Data_2015_2021 %>%
   # Convert columns that should be numeric to numeric values (they are character strings up to this point)
   mutate(HINCP = as.numeric(HINCP),
          MARKETVAL = as.numeric(MARKETVAL),
@@ -382,7 +373,8 @@ Data_2015_2021 <- Data_2015 %>%
          HHAGE = as.numeric(HHAGE),
          HHMOVE = as.numeric(HHMOVE),
          REMODAMT = as.numeric(REMODAMT),
-         JOBCOST = as.numeric(JOBCOST)) 
+         JOBCOST = as.numeric(JOBCOST))   
+
 
 
 # Create a 'LogicCheck' dataframe with rows that contain a value (in ANY column!) equal to one of the following:
@@ -391,7 +383,7 @@ Data_2015_2021 <- Data_2015 %>%
 # If it is not empty, check the rows for potentially missed NA values.
 
 LogicCheck <- Data_2015_2021 %>%
-  filter_all(any_vars(. %in% c(-9, -6, '-6', '-9', '.', 'B', 99998, 99999, '99999', '99998')))
+  filter_all(any_vars(. %in% c(-9, -6, '-6', '-9', '.', 'B', 99998, 99999, '99999', '99998', 'NR')))
 
 # Output the dataset to the specified file path
 write.xlsx(Data_2015_2021, "C:/Users/ikennedy/OneDrive - JBREC/General - BP research_ public use microdata coding and data/CleanedData_Ian/Data_2015_2021.xlsx")

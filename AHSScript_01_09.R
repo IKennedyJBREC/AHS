@@ -140,13 +140,13 @@ Reclassify <- function(Data) {
     
     # Create a 'JobCategory' column for each job type
     mutate(JobCategory = case_when(RAS == '01' ~ 'DisRepairs',
-                                   RAS %in% c('03', '09', '35', '02', '07', '73', '05', '36', '08', '06', '10') ~ 'RoomAdd',
+                                   RAS %in% c('02', '03', '05', '06', '07', '08', '09', '10', '35', '36', '73') ~ 'RoomAdd',
                                    RAS == '71' ~ 'Bathroom',
                                    RAS =='72' ~ 'Kitchen',
-                                   RAS %in% c('11', '14', '12', '13', '67') ~ 'OutsideAtt',
-                                   RAS %in% c('37', '38', '45', '15') ~ 'Exterior',
+                                   RAS %in% c('11', '12', '13', '14', '67') ~ 'OutsideAtt',
+                                   RAS %in% c('15', '37', '38', '45') ~ 'Exterior',
                                    RAS %in% c('49', '51', '52', '53', '55', '64') ~ 'Interior',
-                                   RAS %in% c('40', '47', '42', '74', '57', '58', '61', '62', '63') ~ 'Systems',
+                                   RAS %in% c('40', '42', '47', '57', '58', '61', '62', '63', '74') ~ 'Systems',
                                    RAS %in% c('60', '65', '66', '68', '69', '70') ~ 'LotYardOther')) %>%
     # Create a 'CSA' variable
     mutate(CSA = case_when(SMSA == "0520" ~ 'ATL',
@@ -239,8 +239,6 @@ Reclassify <- function(Data) {
     mutate(VACANCY = case_when(VACANCY %in% c('01', '04') ~ 'For Rent or Rented',
                                VACANCY == '02' ~ 'Rent or Sale',
                                VACANCY %in% c('03', '05') ~ 'For Sale or Sold',
-                               #VACANCY == '04' ~ 'Rent, Not Yet Occupied',
-                               #VACANCY == '05' ~ 'Sold, Not Yet Occupied',
                                VACANCY == '06' ~ 'Occasional Use',
                                VACANCY == '07' ~ 'Other',
                                VACANCY == '08' ~ 'Seasonal, Summer Only',
@@ -261,9 +259,9 @@ Reclassify <- function(Data) {
     
     # Amend the RAD variable (99999 & -6 here are NA, 99998 & -9 here are 'Not Reported')
     # RAD = JOBCOST (2021)
-    mutate(RAD = case_when(RAD %in% c('99999', '-6') ~ NA,
-                         RAD %in%  c('99998', '-9') ~ 'NR',
-                         !RAD %in% c('-6', '-9') ~ RAD))  %>%
+    mutate(RAD = case_when(RAD %in% c('-6') ~ NA,
+                         RAD %in%  c('-9', '.', .) ~ 'NR',
+                         !RAD %in% c('-6', '-9', '.', .) ~ RAD))  %>%
     
     # Rename variables to match 2015-2021
     rename(BLD = NUNIT2, HINCP = ZINC2, INTSTATUS = ISTATUS, MAINTAMT = CSTMNT, MARKETVAL = VALUE, 
@@ -284,8 +282,23 @@ Data_2009 <- Reclassify(Data_2009) %>%
 
 Data_2001_2009 <- Data_2001 %>%
   # Attach 2017-2021 datasets to 2015 by row
-  rbind(Data_2003, Data_2005, Data_2007, Data_2009) %>%
-  # Convert numeric columns to numeric values
+  rbind(Data_2003, Data_2005, Data_2007, Data_2009)
+
+# Function to replace 'NR' with -1 in a vector
+ReplaceNR <- function(x) {
+  ifelse(x == 'NR', -1, x)
+}
+
+# Function to apply the replacement to all columns in a data frame
+ReplaceNR_Final <- function(Data) {
+  Data %>% mutate(across(everything(), ReplaceNR))
+}
+
+# Apply ReplaceNR_Final() to the 2001-2009 data, this will replace any 'NR' values with -1
+Data_2001_2009 <- ReplaceNR_Final(Data_2001_2009)
+
+Data_2001_2009 <- Data_2001_2009 %>% 
+# Convert numeric columns to numeric values
   mutate(HINCP = as.numeric(HINCP),
          MARKETVAL = as.numeric(MARKETVAL),
          WEIGHT = as.numeric(WEIGHT),
@@ -321,7 +334,7 @@ Data_2001_2021 <- Data_2001_2021[order(Data_2001_2021$AHSYEAR), ]
 # These are all typical NA classifications for AHS variables, if LogicCheck is empty after running the following line, you are good to go! 
 # If it is not empty, check the rows for potentially missed NA values.
 LogicCheck <- Data_2001_2021 %>%
-  filter_all(any_vars(. %in% c(-9, -6, '-6', '-9', '.', 'B', 99998, 99999, '99999', '99998')))
+  filter_all(any_vars(. %in% c(-9, -6, '-6', '-9', '.', 'B', 99998, 99999, '99999', '99998', .)))
 
 # Output the dataset to the specified file path
 write.xlsx(Data_2001_2021, "C:/Users/ikennedy/OneDrive - JBREC/General - BP research_ public use microdata coding and data/CleanedData_Ian/Data_2001_2021.xlsx")

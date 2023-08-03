@@ -13,8 +13,13 @@ Data_1997_2021_Filepath <- readline(prompt = "Enter File Path to 1997-2021 data.
 # Read in the 1995 data, 1995 is in a wide format
 Data_1995 <- read.csv("C:/Users/ikennedy/OneDrive - JBREC/General - BP research_ public use microdata coding and data/CleanedData_Ian/AHSProject/1995/ahs1995n.csv")
 
-# Calculate the number of households
-Households <- as.numeric(length(unique(Data_1995$CONTROL)))
+# Calculate the total number of Owner-Occupied Households
+Households <- Data_1995 %>%
+  distinct(CONTROL, .keep_all = TRUE) %>%
+  filter(TENURE %in% c("'1'")) %>%
+  summarize(Households = sum(WEIGHT))
+Households <- round(Households$Households)
+
 
 
 # Read in the Variable Matching sheet for Household variables
@@ -165,14 +170,15 @@ Reclassify <- function(Data) {
     
     # Create a 'JobCategory' column for each job type
     mutate(JobCategory = case_when(RAS == '01' ~ 'DisRepairs',
-                                   RAS %in% c('03', '09', '35', '02', '07', '73', '05', '36', '08', '06', '10', '04') ~ 'RoomAdd',
+                                   RAS %in% c('02', '03', '04', '05', '06', '07', '08', '09', '10', '35', '36', '73') ~ 'RoomAdd',
                                    RAS %in% c('16', '17', '18', '19', '20', '21', '22', '23', '24', '25', '71') ~ 'Bathroom',
                                    RAS %in% c('26', '27', '28', '29', '30', '31', '32', '33', '34', '72') ~ 'Kitchen',
-                                   RAS %in% c('11', '14', '12', '13', '67') ~ 'OutsideAtt',
-                                   RAS %in% c('37', '38', '45', '15', '39', '46') ~ 'Exterior',
-                                   RAS %in% c('49', '51', '52', '53', '55', '64', '50', '54', '56') ~ 'Interior',
-                                   RAS %in% c('40', '47', '42', '74', '41', '48', '57', '58', '59','61', '62', '63', '43', '44') ~ 'Systems',
+                                   RAS %in% c('11', '12', '13', '14', '67') ~ 'OutsideAtt',
+                                   RAS %in% c('15', '37', '38', '39', '45', '46') ~ 'Exterior',
+                                   RAS %in% c('49', '50', '51', '52', '53', '54', '55', '56', '64') ~ 'Interior',
+                                   RAS %in% c('40', '41', '42', '43', '44', '47', '48', '57', '58', '59', '61', '62', '63', '74') ~ 'Systems',
                                    RAS %in% c('60', '65', '66', '68', '69', '70') ~ 'LotYardOther')) %>%
+    
     # Create a 'CSA' variable
     mutate(CSA = case_when(SMSA == "0520" ~ 'ATL',
                            SMSA == "0720" ~ 'BAL',
@@ -288,6 +294,22 @@ Reclassify <- function(Data) {
 # Finalize the 1995 data by using the custom function above
 Data_1995 <- Reclassify(Data_1995) %>%
   mutate(AHSYEAR = 1995)
+
+
+# Function to replace 'NR' with -1 in a vector
+ReplaceNR <- function(x) {
+  ifelse(x == 'NR', -1, x)
+}
+
+# Function to apply the replacement to all columns in a data frame
+ReplaceNR_Final <- function(Data) {
+  Data %>% mutate(across(everything(), ReplaceNR))
+}
+
+# Apply ReplaceNR_Final() to the 1995 data, this will replace any 'NR' values with -1
+Data_1995 <- ReplaceNR_Final(Data_1995)
+
+
 
 Data_1995 <- Data_1995 %>%
   # Convert numeric columns to numeric values

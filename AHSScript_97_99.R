@@ -138,13 +138,13 @@ Reclassify <- function(Data) {
     
     # Create a 'JobCategory' column for each job type
     mutate(JobCategory = case_when(RAS == '01' ~ 'DisRepairs',
-                                   RAS %in% c('03', '09', '35', '02', '07', '73', '05', '36', '08', '06', '10', '04') ~ 'RoomAdd',
+                                   RAS %in% c('02', '03', '04', '05', '06', '07', '08', '09', '10', '35', '36', '73') ~ 'RoomAdd',
                                    RAS %in% c('16', '17', '18', '19', '20', '21', '22', '23', '24', '25', '71') ~ 'Bathroom',
                                    RAS %in% c('26', '27', '28', '29', '30', '31', '32', '33', '34', '72') ~ 'Kitchen',
-                                   RAS %in% c('11', '14', '12', '13', '67') ~ 'OutsideAtt',
-                                   RAS %in% c('37', '38', '45', '15', '39', '46') ~ 'Exterior',
-                                   RAS %in% c('49', '51', '52', '53', '55', '64', '50', '54', '56') ~ 'Interior',
-                                   RAS %in% c('40', '47', '42', '74', '41', '48', '57', '58', '59','61', '62', '63', '43', '44') ~ 'Systems',
+                                   RAS %in% c('11', '12', '13', '14', '67') ~ 'OutsideAtt',
+                                   RAS %in% c('15', '37', '38', '39', '45', '46') ~ 'Exterior',
+                                   RAS %in% c('49', '50', '51', '52', '53', '54', '55', '56', '64') ~ 'Interior',
+                                   RAS %in% c('40', '41', '42', '43', '44', '47', '48', '57', '58', '59', '61', '62', '63', '74') ~ 'Systems',
                                    RAS %in% c('60', '65', '66', '68', '69', '70') ~ 'LotYardOther')) %>%
     # Create a 'CSA' variable
     mutate(CSA = case_when(SMSA == "0520" ~ 'ATL',
@@ -232,8 +232,6 @@ Reclassify <- function(Data) {
     mutate(VACANCY = case_when(VACANCY %in% c('01', '04') ~ 'For Rent or Rented',
                                VACANCY == '02' ~ 'Rent or Sale',
                                VACANCY %in% c('03', '05') ~ 'For Sale or Sold',
-                               #VACANCY == '04' ~ 'Rent, Not Yet Occupied',
-                               #VACANCY == '05' ~ 'Sold, Not Yet Occupied',
                                VACANCY == '06' ~ 'Occasional Use',
                                VACANCY == '07' ~ 'Other',
                                VACANCY == '08' ~ 'Seasonal, Summer Only',
@@ -251,9 +249,9 @@ Reclassify <- function(Data) {
 
     # Amend the RAD variable (-6 here is NA, -9 here is 'Not Reported')
     # RAD = JOBCOST (2021)
-    mutate(RAD = case_when(RAD == '-6' ~ NA,
-                           RAD == '-9' ~ 'NR',
-                           !RAD %in% c('-6', '-9') ~ RAD))  %>%
+    mutate(RAD = case_when(RAD %in% c('-6') ~ NA,
+                           RAD %in%  c('-9', '.', .) ~ 'NR',
+                           !RAD %in% c('-6', '-9', '.', .) ~ RAD))  %>%
     
     # Rename variables to match 2015-2021
     rename(BLD = NUNIT2, HINCP = ZINC2, INTSTATUS = ISTATUS, MAINTAMT = CSTMNT, MARKETVAL = VALUE, 
@@ -269,7 +267,22 @@ Data_1999 <- Reclassify(Data_1999) %>%
 
 Data_1997_1999 <- Data_1997 %>%
   # Attach 2017-2021 datasets to 2015 by row
-  rbind(Data_1999) %>%
+  rbind(Data_1999)
+
+# Function to replace 'NR' with -1 in a vector
+ReplaceNR <- function(x) {
+  ifelse(x == 'NR', -1, x)
+}
+
+# Function to apply the replacement to all columns in a data frame
+ReplaceNR_Final <- function(Data) {
+  Data %>% mutate(across(everything(), ReplaceNR))
+}
+
+# Apply ReplaceNR_Final() to the 1997-1999 data, this will replace any 'NR' values with -1
+Data_1997_1999 <- ReplaceNR_Final(Data_1997_1999)
+
+Data_1997_1999 <- Data_1997_1999 %>%
   # Convert numeric columns to numeric values
   mutate(HINCP = as.numeric(HINCP),
          MARKETVAL = as.numeric(MARKETVAL),

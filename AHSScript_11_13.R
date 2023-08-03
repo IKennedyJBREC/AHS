@@ -142,13 +142,13 @@ Reclassify <- function(Data) {
     
     # Create a 'JobCategory' column for each job type
     mutate(JobCategory = case_when(RAS == '01' ~ 'DisRepairs',
-                                   RAS %in% c('03', '09', '35', '02', '07', '73', '05', '36', '08', '06', '10') ~ 'RoomAdd',
+                                   RAS %in% c('02', '03', '05', '06', '07', '08', '09', '10', '35', '36', '73') ~ 'RoomAdd',
                                    RAS == '71' ~ 'Bathroom',
                                    RAS =='72' ~ 'Kitchen',
-                                   RAS %in% c('11', '14', '12', '13', '67') ~ 'OutsideAtt',
-                                   RAS %in% c('37', '38', '45', '15') ~ 'Exterior',
-                                   RAS %in% c('49', '51', '52', '53', '55', '64') ~ 'Interior',
-                                   RAS %in% c('40', '47', '42', '74', '57', '58', '61', '62', '63') ~ 'Systems',
+                                   RAS %in% c('11', '12', '13', '14', '67') ~ 'OutsideAtt',
+                                   RAS %in% c('15', '37', '38', '45') ~ 'Exterior',
+                                   RAS %in% c('49', '52', '53', '55', '64') ~ 'Interior',
+                                   RAS %in% c('40', '42', '47', '57', '58', '61', '62', '63', '74') ~ 'Systems',
                                    RAS %in% c('60', '65', '66', '68', '69', '70') ~ 'LotYardOther')) %>%
     # Create a 'CSA' variable
     mutate(CSA = case_when(SMSA == "0520" ~ 'ATL',
@@ -250,8 +250,6 @@ Reclassify <- function(Data) {
     mutate(VACANCY = case_when(VACANCY %in% c('01', '04') ~ 'For Rent or Rented',
                                VACANCY == '02' ~ 'Rent or Sale',
                                VACANCY %in% c('03', '05') ~ 'For Sale or Sold',
-                               #VACANCY == '04' ~ 'Rent, Not Yet Occupied',
-                               #VACANCY == '05' ~ 'Sold, Not Yet Occupied',
                                VACANCY == '06' ~ 'Occasional Use',
                                VACANCY == '07' ~ 'Other',
                                VACANCY == '08' ~ 'Seasonal, Summer Only',
@@ -290,11 +288,28 @@ Data_2011 <- Reclassify(Data_2011) %>%
   mutate(AHSYEAR = 2011)
 
 Data_2013 <- Reclassify(Data_2013) %>%
+  # Specify AHSYEAR is 2013
   mutate(AHSYEAR = 2013)
+
+# Function to replace 'NR' with -1 in a vector
+ReplaceNR <- function(x) {
+  ifelse(x == 'NR', -1, x)
+}
+
+# Function to apply the replacement to all columns in a data frame
+ReplaceNR_Final <- function(Data) {
+  Data %>% mutate(across(everything(), ReplaceNR))
+}
 
 Data_2011_2013 <- Data_2011 %>%
   # Attach 2017-2021 datasets to 2015 by row
-  rbind(Data_2013) %>%
+  rbind(Data_2013)
+
+# Apply ReplaceNR_Final() to the 2011-2013 data, this will replace any 'NR' values with -1
+Data_2011_2013 <- ReplaceNR_Final(Data_2011_2013)
+
+
+Data_2011_2013 <- Data_2011_2013 %>%
   # Convert numeric columns to numeric values
   mutate(HINCP = as.numeric(HINCP),
          MARKETVAL = as.numeric(MARKETVAL),
