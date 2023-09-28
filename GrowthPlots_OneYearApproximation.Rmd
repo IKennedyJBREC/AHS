@@ -1,0 +1,395 @@
+---
+title: "AHS R/R Model Rebuild - Project Spend Growth vs Potential Predictor Growth"
+description: "Exploratory Plots"
+author: "Ian Kennedy"
+date: "`r Sys.Date()`"
+output: 
+  distill::distill_article:
+    toc: true
+    toc_float: true
+    toc_depth: 1
+    pandoc_args: "--number-sections"
+    code_folding: true
+---
+
+<style>
+html {
+  scroll-behavior: smooth;
+}
+#TOC {
+  position: relative;
+  z-index: 50;
+  background: #ebebeb;     
+  padding: 10px;           
+  border-radius: 5px;    
+  }
+@media screen and (max-width: 900px) {
+#TOC {
+    position: relative;
+  }
+}
+</style>
+
+
+```{r Setup, include=FALSE, echo=FALSE}
+knitr::opts_chunk$set(echo = TRUE,  
+                      layout="l-body-outset",
+                      fig.width=55,  
+                      fig.height=20,  
+                      out.width = 80,  
+                      code_folding = TRUE)
+options(scipen = 999, width = 180)
+```
+
+```{r Packages, echo=FALSE, include=FALSE}
+library(readxl)
+library(rmarkdown)
+library(tidyverse)
+library(distill)
+library(magrittr)
+library(yaml)
+library(ggthemes)
+library(fredr)
+library(openxlsx)
+library(lubridate)
+library(xts)
+library(htmlwidgets)
+library(htmltools)
+library(reactable)
+library(knitr)
+library(writexl)
+```
+
+
+```{r Analysis}
+
+AllData <- read.xlsx("C:/Users/ikennedy/JBREC/BP research public use microdata coding and data - General/AHSProject/OutsideDataSources_SingleYearApprox/OutsideData_fredr/AllData.xlsx")
+OutsideData <- read.xlsx("C:/Users/ikennedy/JBREC/BP research public use microdata coding and data - General/AHSProject/OutsideDataSources_SingleYearApprox/OutsideData_fredr/OutsideData.xlsx")
+LumberData <- read.xlsx("C:/Users/ikennedy/JBREC/BP research public use microdata coding and data - General/AHSProject/OutsideDataSources_SingleYearApprox/OutsideData_fredr/LumberData.xlsx")
+CESData <- read.xlsx("C:/Users/ikennedy/JBREC/BP research public use microdata coding and data - General/AHSProject/OutsideDataSources_SingleYearApprox/OutsideData_fredr/CESData.xlsx")
+Permit_HIRL_Data <- read.xlsx("C:/Users/ikennedy/JBREC/BP research public use microdata coding and data - General/AHSProject/OutsideDataSources_SingleYearApprox/OutsideData_fredr/Permit_HIRL_Data.xlsx")
+EastPrecipDiff <- read.xlsx("C:/Users/ikennedy/JBREC/BP research public use microdata coding and data - General/AHSProject/OutsideDataSources_SingleYearApprox/OutsideData_fredr/EastPrecipDiff.xlsx")
+BurnsData <- read.xlsx("C:/Users/ikennedy/JBREC/BP research public use microdata coding and data - General/AHSProject/OutsideDataSources_SingleYearApprox/OutsideData_fredr/BurnsData.xlsx")
+
+```
+
+```{r JBRECTheme, echo=FALSE, include=FALSE}
+
+theme_jbrec <- function(basesize = 12,
+                        linewidth = .5, 
+                        family = 'sans', 
+                        textcolor = 'black', 
+                        backgroundcolor = 'white', 
+                        gridcolor = '#DCDDE4', 
+                        plotface = 'italic') {
+
+    theme(
+    panel.grid.minor = element_blank(),
+    panel.grid.major =  element_line(color = gridcolor, linewidth = linewidth),
+    
+    panel.background = element_rect(color = backgroundcolor, fill = backgroundcolor),
+    # Add the logo to the bottom right corner of the plot background
+    plot.background = element_rect(color = backgroundcolor, fill = backgroundcolor),
+    panel.border = element_blank(),
+    
+    strip.background = element_blank(),
+    strip.text = element_text(size = basesize*1.25, color = textcolor, face = 'bold', family = family, margin = unit(rep(5, 4), "pt")),
+    strip.clip = 'on',
+    strip.placement = 'outside',
+    
+    # adjust the margins of plots and remove axis ticks
+    plot.margin = margin(5, 5, 5, 5, unit = 'pt'),
+    
+    # change text family, size, and adjust position of titles
+    text = element_text(family = family, size = basesize),
+    
+    
+    axis.text = element_text(family = family, color = textcolor, size = basesize),
+    axis.text.x = element_text(vjust = .5, hjust = 0, margin = margin(0,0,0,0)),
+    axis.title = element_text(family = family, size = basesize*7/6, face = 'bold'),
+    axis.title.x = element_text(margin = margin(5, 0, 0, 0, unit = "pt"), color = textcolor, family = family),
+    axis.title.y = element_text(margin = margin(0, 5, 0, 0, unit = "pt"), color = textcolor, family = family, angle = 90),
+    axis.ticks = element_blank(), 
+    axis.line.x = element_blank(),
+    axis.line.y = element_blank(),
+    
+    plot.title = element_text(family = family, face = 'bold', size = basesize*1.5, color = textcolor, hjust = 0),
+    plot.title.position = 'plot',
+
+    plot.subtitle = element_text(size = basesize*7/6, family = family, face = 'italic', margin = margin(2.5, 0, 2.5, 0, unit = "pt"), hjust = .01, color = textcolor),
+    plot.caption = element_text(size = 10, family = family, face = 'italic', margin = margin(0, 0, 0, 0, unit = "pt"), color = textcolor, hjust = 0),
+    plot.caption.position = "plot",
+    
+
+    legend.background = element_rect(color = backgroundcolor, fill = backgroundcolor),
+    legend.key = element_rect(color = backgroundcolor, fill = backgroundcolor),
+    legend.text = element_text(family = family, color = textcolor, size = basesize*7/6, vjust = .5),
+    legend.title = element_blank(),
+    legend.margin = margin(1,1,1,1, unit = "pt"),
+    legend.position = 'top',
+    legend.key.height = unit(.025, 'npc'),
+    legend.key.width = unit(.05, 'npc'),
+    legend.box = 'vertical',
+    legend.direction = 'horizontal',
+    legend.justification = 'center',
+    
+    
+    complete = FALSE,
+    validate = FALSE,
+    
+  ) 
+}
+  
+
+AddJBRECLogo <- function(logopath, plotpath, width, height, dpi, logoscale){
+  ggsave(plotpath, width = width, height = height, dpi = dpi)
+  Plot <- add_logo(plotpath, logo_path = logopath, logo_position = 'top right', logo_scale = logoscale)
+  image_write(Plot, path = plotpath, format = "png")
+  Plot
+}
+ 
+Palettes <- c(
+  # Basic Pallete
+  ## Use Red, Green, and Beige for Increasing/Decreasing or Positive/Negative Values
+  `Blue`= "#004E89", `Orange`= "#F1774F", `Green` = '#5FB37D', `Yellow` = '#FAC247', `Purple` = '#694B80', `Brown` = '#8A7968', `Red` = '#C93E45', `Beige` = '#DCD6C9',
+  
+  # Blues
+  `Blue1` = '#12213E', `Blue2` = '#004E89', `Blue3` = '#2F9AB8', `Blue4` = '#5BC0EB', `Blue5` = '#C6DDF0',
+  
+  # Greens
+  `Green1` = '#0C3C21', `Green2` = '#346244', `Green3` = '#5FB37D', `Green4` = '#5FB37D', `Green5` = '#5FB37D',
+  
+  # Pinks
+  `Pink1` = '#6B2009', Pink2 = '#C93E45', `Pink3` = '#F26581', `Pink4` = '#F26581',
+  
+  # Purples
+  `Purple1` = '#694B80', `Purple2` = '#5E2BFF', `Purple3` = '#C47AC0', `Purple4` = '#B8B8FF',
+  
+  #Browns
+  `Brown1` = '#514538', `Brown2` = '#8A7968',`Brown3` = '#C29E58', `Brown4` = '#DCD6C9',
+  
+  #Oranges/Yellows
+  `Orange1` = '#F1774F', `Orange2` = '#FFACA8', `Orange3` = '#FAC247', `Orange4` = '#F4FF52',
+  
+  # 5-Color Map
+  `Map5_1` = '#6EA280', `Map5_2` = '#B6D181', `Map5_3` = '#FBCE6C', `Map5_4` = '#F49272', `Map5_5` = '#D4656A',
+  
+  # 6-Color Map
+  `Map6_1` = '#5D8169', `Map6_2` = '#7FC297', `Map6_3` = '#B6D181', `Map6_4` = '#FBCE6C', `Map6_5` = '#D4656A', `Map6_6` = '#D4656A',
+  
+  # 6-Color Counties Map
+  `Map6C_1` = '#72BC8C', `Map6C_2` = '#72BC8C', `Map6C_3` = '#C1D894', `Map6C_4` = '#FDE7B5', `Map6C_5` = '#F49272', `Map6C_6` = '#CE4E54',
+  
+  # 7-Color Map
+  `Map7_1` = '#4F6758', `Map7_2` = '#679578', `Map7_3` = '#7FC297', `Map7_4` = '#BDC981', `Map7_5` = '#FBCE6C', `Map7_6` = '#F49272', `Map7_7` = '#D4656A',
+  
+  # 8-Color Map
+  `Map8_1` = '#4F6758', `Map8_2` = '#679578', `Map8_3` = '#7FC297', `Map8_4` = '#BDC981', `Map8_5` = '#FBCE6C', `Map8_6` = '#F8B16F', `Map8_7` = '#F49272', `Map8_8` = '#D4656A',
+  
+  # Map Markers
+  `Markers_1` = '#346244', `Markers_2` = '#5FB37D', `Markers_3` = '#B9D379', `Markers_4` = '#FAC247', `Markers_5` = '#F1774F', `Markers_6` = '#C93E45'
+  )
+
+mycols <- function(...) {
+  cols <- c(...)
+  if (is.null(cols))
+    return (Palettes)
+  Palettes[cols]
+}
+
+palettes <- list(
+  `Primary` = mycols('Blue', 'Green', 'Orange'),
+  `Secondary` = mycols('Yellow', 'Purple'),
+  `PrimaryAndSecondary` = mycols('Blue', 'Green', 'Orange', 'Yellow', 'Purple'),
+  `RedGreenBeige` =  mycols('Red', 'Green', 'Beige'),
+  `Basic` = mycols('Blue', 'Orange', 'Green', 'Yellow', 'Purple', 'Brown'),
+  `Blues` = mycols('Blue1', 'Blue2', 'Blue3', 'Blue4', 'Blue5'),
+  `Greens` = mycols('Green1', 'Green2', 'Green3', 'Green4', 'Green5'),
+  `Pinks` = mycols('Pink1', 'Pink2', 'Pink3', 'Pink4'),
+  `Browns` = mycols('Brown1', 'Brown2', 'Brown3', 'Brown4'),
+  `OrangeYellow` = mycols('Orange1', 'Orange2', 'Orange3', 'Orange4'),
+  `Map5` = mycols('Map5_1', 'Map5_2', 'Map5_3', 'Map5_4', 'Map5_5'),
+  `Map6` = mycols('Map6_1', 'Map6_2', 'Map6_3', 'Map6_4', 'Map6_5', 'Map6_6'),
+  `Map6C` = mycols('Map6C_1', 'Map6C_2', 'Map6C_3', 'Map6C_4', 'Map6C_5', 'Map6C_6'),
+  `Map7` = mycols('Map7_1', 'Map7_2', 'Map7_3', 'Map7_4', 'Map7_5', 'Map7_6', 'Map7_7'),
+  `Map8` = mycols('Map8_1', 'Map8_2', 'Map8_3', 'Map8_4', 'Map8_5', 'Map8_6', 'Map8_7', 'Map8_8'),
+  `Markers` = mycols('Markers_1', 'Markers_2', 'Markers_3', 'Markers_4', 'Markers_5', 'Markers6')
+  )
+SelectJBRECPalette <- function(palette, reverse = FALSE, ...) {
+    pal <- palettes[[palette]]
+    if (reverse) pal <- rev(pal)
+    colorRampPalette(pal, ...)
+}
+
+scale_color_jbrec <- function(palette = 'Basic', discrete = TRUE, reverse = FALSE, thousands_seperator = FALSE) {
+  
+  pal <- SelectJBRECPalette(palette = palette, reverse = reverse)
+  
+    if (discrete) {
+    discrete_scale("colour", SelectJBRECPalette, palette = pal)
+  
+  } else if (discrete & thousands_seperator) {
+    discrete_scale("colour", SelectJBRECPalette, palette = pal, labels = function(income) format(income, big.mark = ",", scientific = FALSE))
+  
+  } else if (thousands_seperator) {
+    scale_color_gradientn(colours = pal(256), labels = function(income) format(income, big.mark = ",", scientific = FALSE))
+    
+  } else {
+    scale_color_gradientn(colours = pal(256), labels = function(income) format(income, scientific = FALSE))
+  }
+}
+
+
+scale_fill_jbrec <- function(palette = 'Basic', discrete = TRUE, reverse = FALSE, thousands_seperator = FALSE) {
+  
+  pal <- SelectJBRECPalette(palette = palette, reverse = reverse)
+  
+  if (discrete) {
+    discrete_scale("fill", SelectJBRECPalette, palette = pal)
+  
+  } else if (discrete & thousands_seperator) {
+    discrete_scale("fill", SelectJBRECPalette, palette = pal, labels = function(income) format(income, big.mark = ",", scientific = FALSE))
+ 
+  } else if (thousands_seperator) {
+    scale_fill_gradientn(colours = pal(256), labels = function(income) format(income, big.mark = ",", scientific = FALSE))
+  
+  } else {
+    scale_fill_gradientn(colours = pal(256), labels = function(income) format(income, scientific = FALSE))
+  }
+}
+
+```
+
+# Plots for Potential Predictors (1995-2009)
+```{r Plots, echo=TRUE, include=TRUE}
+
+ggplot() +
+  geom_line(data = AllData, aes(Year, DisRepairDiff, color = "Disaster Repair Growth"), size = 1.5) +
+  geom_line(data = OutsideData, aes(Date, GasolineStations, color = "Gas Station Growth"), size = 1.5) +
+  geom_line(data = EastPrecipDiff, aes(Year, May, color = "Eastern US, May Precipitation Growth"), size = 1.5) +
+  scale_x_continuous(breaks = c(seq(1999, 2009, 2)), limits = c(1999, 2009)) +
+  scale_y_continuous(breaks = c(seq(-0.4, 1.1, 0.1))) +
+  labs(title = 'Disaster Repair R/R Project Growth Rate vs Possible Predictors') +
+  ylab('Growth Rate') +
+  scale_color_manual(values = c("Disaster Repair Growth" = "black", "Gas Station Growth" = "red", "Eastern US, May Precipitation Growth" = "blue")) +
+  theme(axis.text.x = element_text(angle = 90)) +
+  theme_jbrec(basesize = 36, linewidth = 2)
+
+ggplot() +
+  geom_line(data = AllData, aes(Year, MiniDiff, color = "Mini Project Growth"), size = 1.5) +
+  geom_line(data = OutsideData, aes(Date, TotalPrivateConstructionSpendingManufacturingintheUnitedStates, color = "Electronics/Appliance Store Growth"), size = 1.5) +
+  geom_line(data = CESData, aes(Date, `Expenditures_FloorCoveringsbyIncomeBeforeTaxes_$40_000to$49_999`, color = "Spending on Floor Coverings, Incomes between 40-50K, Growth"), size = 1.5) +
+  scale_x_continuous(breaks = c(seq(1999, 2009, 2)), limits = c(1999, 2009)) +
+  scale_y_continuous(breaks = c(seq(-0.4, 1.1, 0.1))) +
+  labs(title = 'Mini R/R Project Growth Rate vs Possible Predictors') +
+  ylab('Growth Rate') +
+  scale_color_manual(values = c("Mini Project Growth" = "black", "Electronics/Appliance Store Growth" = "red", "Spending on Floor Coverings, Incomes between 40-50K, Growth" = "blue")) +
+  theme(axis.text.x = element_text(angle = 90)) +
+  theme_jbrec(basesize = 36, linewidth = 2)
+
+ggplot() +
+  geom_line(data = AllData, aes(Year, SmallDiff, color = "Small Project Growth"), size = 1.5) +
+  geom_line(data = OutsideData, aes(Date, ElectronicsandApplianceStores, color = "Electronics/Appliance Store Growth"), size = 1.5) +
+  geom_line(data = CESData, aes(Date, `Expenditures_HouseholdFurnishingsandEquipmentbyQuintilesofIncomeBeforeTaxes_Fourth20Percent(61stto80thPercentile)`, color = "4th Quintile Spending on Household Furninshings and Equipment Growth"), size = 1.5) +
+  scale_x_continuous(breaks = c(seq(1999, 2009, 2)), limits = c(1999, 2009)) +
+  scale_y_continuous(breaks = c(seq(-0.4, 1.1, 0.1))) +
+  labs(title = 'Small R/R Project Growth Rate vs Possible Predictors') +
+  ylab('Growth Rate') +
+  scale_color_manual(values = c("Small Project Growth" = "black", "Electronics/Appliance Store Growth" = "red", "4th Quintile Spending on Household Furninshings and Equipment Growth" = "blue")) +
+  theme(axis.text.x = element_text(angle = 90)) +
+  theme_jbrec(basesize = 36 , linewidth = 2)
+
+ggplot() +
+  geom_line(data = AllData, aes(Year, MediumDiff, color = "Medium Project Growth"), size = 1.5) +
+  geom_line(data = CESData, aes(Date, Expenditures_MajorAppliances_AllConsumerUnits, color = "Major Appliance Spending Growth, All Consumers"), size = 1.5) +
+  geom_line(data = OutsideData, aes(Date, RetailTrade_ExcludingMotorVehicleandPartsDealers, color = "Retail Trade Growth, No Car/Parts Dealers"), size = 1.5) +
+  scale_x_continuous(breaks = c(seq(1999, 2009, 2)), limits = c(1999, 2009)) +
+  scale_y_continuous(breaks = c(seq(-0.4, 1.1, 0.1))) +
+  labs(title = 'Medium R/R Project Growth Rate vs Possible Predictors') +
+  ylab('Growth Rate') +
+  scale_color_manual(values = c("Medium Project Growth" = "black", "Major Appliance Spending Growth, All Consumers" = "red", "Retail Trade Growth, No Car/Parts Dealers" = "blue")) +
+  theme(axis.text.x = element_text(angle = 90)) +
+  theme_jbrec(basesize = 36 , linewidth = 2)
+
+ggplot() +
+  geom_line(data = AllData, aes(Year, LargeDiff, color = "Large Project Growth"), size = 1.5) +
+  geom_line(data = OutsideData, aes(Date, NewPrivately_OwnedHousingUnitsUnderConstructionUnitsinBuildingswith2_4Units, color = "Growth in New Housing UNits Under Construction, 2-4 Unit Buildings"), size = 1.5) +
+  geom_line(data = OutsideData, aes(Date, RetailTrade_ExcludingMotorVehicleandPartsDealers, color = "Retail Trade Growth, No Car/Parts Dealers"), size = 1.5) +
+  geom_line(data = CESData, aes(Date, `Expenditures_MajorAppliancesbyQuintilesofIncomeBeforeTaxes_Highest20Percent(81stto100thPercentile)`, color = "Major Appliance Spending Growth, Top Quintile of Earners"), size = 1.5) +
+  scale_x_continuous(breaks = c(seq(1999, 2009, 2)), limits = c(1999, 2009)) +
+  scale_y_continuous(breaks = c(seq(-0.4, 1.1, 0.1))) +
+  labs(title = 'Large R/R Project Growth Rate vs Possible Predictors') +
+  ylab('Growth Rate') +
+  scale_color_manual(values = c("Large Project Growth" = "black", "Growth in New Housing UNits Under Construction, 2-4 Unit Buildings" = "red", "Retail Trade Growth, No Car/Parts Dealers" = "blue", "Major Appliance Spending Growth, Top Quintile of Earners" = 'green')) +
+  theme(axis.text.x = element_text(angle = 90)) +
+  theme_jbrec(basesize = 36 , linewidth = 2)
+
+```
+
+
+# Plots for Potential Predictors (2010-Current)
+```{r Plots2, echo=TRUE, include=TRUE}
+
+ggplot() +
+  geom_line(data = AllData, aes(Year, DisRepairDiff, color = "Disaster Repair Growth"), size = 1.5) +
+  geom_line(data = EastPrecipDiff, aes(Year, AMJ, color = "Eastern US, April-June Precipitation Growth"), size = 1.5) +
+  geom_line(data = OutsideData, aes(Date, GasolineStations, color = "Gas Station Growth"), size = 1.5) +
+  scale_x_continuous(breaks = c(seq(2011, 2021, 2)), limits = c(2011, 2021)) +
+  scale_y_continuous(breaks = c(seq(-0.4, .9, 0.1))) +
+  labs(title = 'Disaster Repair R/R Project Growth Rate vs Possible Predictors') +
+  ylab('Growth Rate') +
+  scale_color_manual(values = c("Disaster Repair Growth" = "black", "Eastern US, April-June Precipitation Growth" = "red", "Gas Station Growth" = "blue")) +
+  theme(axis.text.x = element_text(angle = 90)) +
+  theme_jbrec(basesize = 36, linewidth = 2)
+
+ggplot() +
+  geom_line(data = AllData, aes(Year, MiniDiff, color = "Mini Project Growth"), size = 1.5) +
+  geom_line(data = CESData, aes(Date, Expenditures_MajorAppliancesbySizeofConsumerUnit_TwoPeopleinConsumerUnit, color = "Major Appliance Spending Growth, 2-Person HH"), size = 1.5) +
+  geom_line(data = CESData, aes(Date, `Expenditures_MajorAppliancesbyQuintilesofIncomeBeforeTaxes_Second20Percent(21stto40thPercentile)`, color = "Major Appliance Spending Growth, 2nd Lowest Income Quintile"), size = 1.5) +
+  scale_x_continuous(breaks = c(seq(2011, 2021, 2)), limits = c(2011, 2021)) +
+  scale_y_continuous(breaks = c(seq(-0.4, 1.1, 0.1))) +
+  labs(title = 'Mini R/R Project Growth Rate vs Possible Predictors') +
+  ylab('Growth Rate') +
+  scale_color_manual(values = c("Mini Project Growth" = "black", "Major Appliance Spending Growth, 2-Person HH" = "red", "Major Appliance Spending Growth, 2nd Lowest Income Quintile" = "blue")) +
+  theme(axis.text.x = element_text(angle = 90)) +
+  theme_jbrec(basesize = 36, linewidth = 2)
+
+ggplot() +
+  geom_line(data = AllData, aes(Year, SmallDiff, color = "Small Project Growth"), size = 1.5) +
+  geom_line(data = CESData, aes(Date, `Expenditures_MajorAppliancesbyQuintilesofIncomeBeforeTaxes_Fourth20Percent(61stto80thPercentile)`, color = "Major Appliance Spending Growth, 2nd Highest Income Quintile"), size = 1.5) +
+  geom_line(data = CESData, aes(Date, `Expenditures_FurniturebyQuintilesofIncomeBeforeTaxes_Third20Percent(41stto60thPercentile)`, color = "Furniture Spending Growth, Middle Income Quintile"), size = 1.5) +
+  scale_x_continuous(breaks = c(seq(2011, 2021, 2)), limits = c(2011, 2021)) +
+  scale_y_continuous(breaks = c(seq(-0.4, 1.1, 0.1))) +
+  labs(title = 'Small R/R Project Growth Rate vs Possible Predictors') +
+  ylab('Growth Rate') +
+  scale_color_manual(values = c("Small Project Growth" = "black", "Major Appliance Spending Growth, 2nd Highest Income Quintile" = "red", "Furniture Spending Growth, Middle Income Quintile" = "blue")) +
+  theme(axis.text.x = element_text(angle = 90)) +
+  theme_jbrec(basesize = 36 , linewidth = 2)
+
+ggplot() +
+  geom_line(data = AllData, aes(Year, MediumDiff, color = "Medium Project Growth"), size = 1.5) +
+  geom_line(data = CESData, aes(Date, Expenditures_MajorAppliancesbySizeofConsumerUnit_FiveorMorePeopleinConsumerUnit, color = "Major Appliance Spending Growth, 5+ Person HHs"), size = 1.5) +
+  geom_line(data = CESData, aes(Date, `Expenditures_FurniturebyQuintilesofIncomeBeforeTaxes_Third20Percent(41stto60thPercentile)`, color = "Furniture Spending Growth, Middle Income Quintile"), size = 1.5) +
+  geom_line(data = CESData, aes(Date, `Expenditures_Maintenance_Repairs_Insurance_OtherExpensesforOwnedDwellingbyQuintilesofIncomeBeforeTaxes_Highest20Percent(81stto100thPercentile)`, color = "Maint/Repairs Spending Growth, Highest Income Quintile"), size = 1.5) +
+  geom_line(data = CESData, aes(Date, `Expenditures_MajorAppliancesbyQuintilesofIncomeBeforeTaxes_Highest20Percent(81stto100thPercentile)`, color = "Major Appliance Spending Growth, Highest Income Quintile"), size = 1.5) +
+  scale_x_continuous(breaks = c(seq(2011, 2021, 2)), limits = c(2011, 2021)) +
+  scale_y_continuous(breaks = c(seq(-0.4, 1.1, 0.1))) +
+  labs(title = 'Medium R/R Project Growth Rate vs Possible Predictors') +
+  ylab('Growth Rate') +
+  scale_color_manual(values = c("Medium Project Growth" = "black", "Major Appliance Spending Growth, 5+ Person HHs" = "red", "Furniture Spending Growth, Middle Income Quintile" = "blue", "Maint/Repairs Spending Growth, Highest Income Quintile" = 'green', "Major Appliance Spending Growth, Highest Income Quintile" = 'purple')) +
+  theme(axis.text.x = element_text(angle = 90)) +
+  theme_jbrec(basesize = 36 , linewidth = 2)
+
+ggplot() +
+  geom_line(data = AllData, aes(Year, LargeDiff, color = "Large Project Growth"), size = 1.5) +
+  geom_line(data = CESData, aes(Date, `Expenditures_FurniturebyQuintilesofIncomeBeforeTaxes_Fourth20Percent(61stto80thPercentile)`, color = "Furniture Spending Growth, 2nd Highest Income Quintile"), size = 1.5) +
+  geom_line(data = OutsideData, aes(Date, BuildingMaterialsandSuppliesDealers, color = "Building Mat./Supplies Dealers Spending Growth"), size = 1.5) +
+  scale_x_continuous(breaks = c(seq(2011, 2021, 2)), limits = c(2011, 2021)) +
+  scale_y_continuous(breaks = c(seq(-0.4, 1.1, 0.1))) +
+  labs(title = 'Large R/R Project Growth Rate vs Possible Predictors') +
+  ylab('Growth Rate') +
+  scale_color_manual(values = c("Large Project Growth" = "black", "Furniture Spending Growth, 2nd Highest Income Quintile" = "red", "Building Mat./Supplies Dealers Spending Growth" = "blue")) +
+  theme(axis.text.x = element_text(angle = 90)) +
+  theme_jbrec(basesize = 36 , linewidth = 2)
+
+```
